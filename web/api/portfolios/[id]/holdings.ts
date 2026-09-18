@@ -1,10 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "http";
-import {
-  getSharesightAccessToken,
-  hasValidApiToken,
-  SHARESIGHT_API_BASE,
-} from "../../../lib/sharesight";
-import { logSnapshotToNotion } from "../../../lib/notion";
+import { getSharesightAccessToken, hasValidApiToken, SHARESIGHT_API_BASE } from "../../../lib/sharesight";
 
 interface RequestWithQuery extends IncomingMessage {
   query?: Record<string, string | string[]>;
@@ -32,25 +27,10 @@ export default async function handler(req: RequestWithQuery, res: ServerResponse
     const upstream = await fetch(`${SHARESIGHT_API_BASE}/portfolios/${portfolioId}/holdings.json`, {
       headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
     });
-    const data = await upstream.json();
-
-    let notionStatus: "logged" | "skipped" | "error" = "skipped";
-    if (upstream.ok) {
-      try {
-        await logSnapshotToNotion(
-          `Sharesight holdings (portfolio ${portfolioId}) – ${new Date().toISOString()}`,
-          data
-        );
-        notionStatus = "logged";
-      } catch (notionErr) {
-        console.error("notion logging failed", notionErr);
-        notionStatus = "error";
-      }
-    }
-
+    const data = await upstream.text();
     res.statusCode = upstream.status;
     res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ ...data, _notion: notionStatus }));
+    res.end(data);
   } catch (err) {
     res.statusCode = 500;
     res.setHeader("Content-Type", "application/json");

@@ -5,18 +5,24 @@ data as a JSON API, callable on demand. No IBKR data here — see the
 `agents/portfolio-analyser` folder one level up for the Claude-driven
 agent that also reconciles against IBKR.
 
-Every successful call also writes a snapshot page (JSON as code blocks)
-into the Notion database `claude_skills_db`, for a running history without
-needing anything scheduled.
+`GET /api/portfolios` also writes one row per portfolio into the Notion
+database `my-portfolio-db`, with value, cost base, and gain breakdown
+(capital/dividend/currency/total) since inception, plus the change since
+the previous snapshot of that portfolio — a running history without
+anything scheduled.
 
 ## Endpoints
 
-- `GET /api/portfolios` — list of Sharesight portfolios
+- `GET /api/portfolios` — list of Sharesight portfolios; also logs a
+  performance snapshot per portfolio to Notion
 - `GET /api/portfolios/<id>/holdings` — holdings for one portfolio
+  (pass-through only, not logged — `my-portfolio-db` is a portfolio-level
+  schema, not per-holding)
 
-Both require an `Authorization: Bearer <API_TOKEN>` header. The response
-includes `_notion: "logged" | "skipped" | "error"` so you can tell whether
-the Notion write succeeded without checking Vercel's function logs.
+Both require an `Authorization: Bearer <API_TOKEN>` header. `/api/portfolios`'s
+response includes `_notion`, an array of `{ portfolioId, status: "logged" | "error", message? }`
+per portfolio, so you can tell whether each Notion write succeeded without
+checking Vercel's function logs.
 
 ## Required environment variables
 
@@ -30,12 +36,11 @@ Set these in the Vercel project's **Settings → Environment Variables**:
   who finds the URL.
 - `NOTION_API_KEY` — an internal integration token from
   [notion.so/my-integrations](https://www.notion.so/my-integrations).
-  After creating the integration, open `claude_skills_db` in Notion, click
+  After creating the integration, open `my-portfolio-db` in Notion, click
   **"..." → Connections**, and add the integration — otherwise the API
   can't see the database and writes will fail with a 404/403.
-- `NOTION_DATABASE_ID` — `3de12e89-b5f6-8067-af71-f34f59349118` (the
-  `claude_skills_db` database under JKF / Quick Notes + Sandbox / Claude
-  Skills Agents Backlog)
+- `NOTION_DATABASE_ID` — `3df12e89-b5f6-809c-9dc6-c388a2b562e7` (the
+  `my-portfolio-db` database under Wealth & Taxes / Portfolio)
 
 ## Example
 
